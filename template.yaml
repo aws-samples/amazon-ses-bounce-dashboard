@@ -1,0 +1,160 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  ses-dashboard
+
+Transform:
+- AWS::Serverless-2016-10-31
+
+Parameters:
+  BounceSNSTopic:
+    Type: "String"
+    Description: "The bounce Amazon SNS Topic that has been created for the SES  identity. 
+    Sepcify the SNS Topic by using its Amazon Resource Name (ARN). 
+    Examples:  arn:aws:sns:us-east-1:123456789012:ses-bounce-notification."
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Runtime: nodejs18.x
+    MemorySize: 128
+    Timeout: 10
+  Api:
+    # Allows any site to call these APIs (can restrict by replacing asterisk with site name)
+    # Automatically adds AllowMethods with a list of methods for this API
+    EndpointConfiguration: EDGE 
+    TracingEnabled: true     
+    Cors:
+      AllowMethods: "'OPTIONS,GET'"
+      AllowHeaders: "'Content-Type'"
+      AllowOrigin: "'*'" 
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  ############################################################################################################################################################################
+#   SQS Queue that subscribes to the SES SNS Notification Topic
+#
+############################################################################################################################################################################
+  BounceSQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 300
+
+  BounceSQSPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: 
+        - !Ref BounceSQS
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Principal:
+            AWS:
+              - !Ref AWS::AccountId
+          Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+          Effect: Allow
+          Resource: !GetAtt BounceSQS.Arn
+          Condition:
+            ArnEquals:
+              aws:SourceArn: !Ref BounceSNSTopic
+
+  BounceSQSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: sqs
+      RawMessageDelivery: true
+      Endpoint: !GetAtt BounceSQS.Arn
+      TopicArn: !Ref BounceSNSTopic
+
+############################################################################################################################################################################
+#   DynamoDB Table that stores SES events
+############################################################################################################################################################################
+  SESEventsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: "id"
+        AttributeType: "S"
+      - AttributeName: "timestamp"
+        AttributeType: "S"
+      KeySchema:
+      - AttributeName: "id"
+        KeyType: "HASH"
+      - AttributeName: "timestamp"
+        KeyType: "RANGE"
+      BillingMode: PROVISIONED        
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: True
+
+############################################################################################################################################################################
+#   Lambda Function that processes the items on the SES SQS queues
+############################################################################################################################################################################
+  ProcessSESQueue:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/ses_queue_handler/
+      Handler: SesNotification.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref SESEventsTable
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref SESEventsTable
+      Events:
+        BounceSQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt BounceSQS.Arn
+            BatchSize: 1
+  
+  ProcessSESQueueLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProcessSESQueue}
+      RetentionInDays: 7
+
+############################################################################################################################################################################
+#   Lambda Function that retrieves the events stored in the DynamoDB table 
+############################################################################################################################################################################
+  GetEventsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/get_events/
+      Handler: getEvents.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref SESEventsTable
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref SESEventsTable
+      Events:
+        HttpPost:
+          Type: Api
+          Properties:
+            Path: '/'
+            Method: get
+
+  
+  GetEventsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GetEventsFunction}
+      RetentionInDays: 14
+
+
+############################################################################################################################################################################
+#   Outputs
+#
+############################################################################################################################################################################
+ 
+Outputs:
+  EventsAPI:
+    Description: API to retrieve events
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod
+ 
+

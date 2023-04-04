@@ -1,0 +1,12 @@
+{
+  "name": "ses_queue_handler",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "SesNotificationHandler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Asif Hamza",
+  "license": "MIT-0"
+}

@@ -1,0 +1,133 @@
+
+*,
+*::after,
+*::before {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: #fff;
+  font-family: -apple-system,system-ui,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
+
+}
+
+.nav-bar {
+  width: 100%;
+  height: 80px; 
+  position: fixed; 
+  top: 0;
+  background: #139ed8;
+}
+
+.nav-bar ul {
+  padding: 20px;
+  margin: 0 auto;
+  list-style: none;
+  text-align: left;
+}
+
+.nav-bar ul li {
+  display: inline-block;
+  margin: 0 10px;
+}
+
+.nav-bar  ul li a {
+  padding: 10px 0;
+  color: #fff;
+  font-size: 1.5rem;
+  text-decoration: none;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  }
+
+  section {
+    width: 100%;
+    padding: 50px;
+    background: #fff;
+    height: 1024px;
+    text-align: left;
+    margin-top: 60px;
+    }
+
+.table {
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-collapse: collapse;
+    overflow: hidden;
+}
+
+
+.table thead th {
+    background: #139ed8;
+    color: #ffffff;
+}
+
+.table td,
+.table th {
+    padding: 10px 20px;
+}
+
+.table tbody tr:nth-of-type(even) {
+    background: #eeeeee;
+}
+
+.table tbody tr:last-of-type {
+    border-bottom: 2px solid #139ed8;
+}
+
+
+.right-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.button-3 {
+  display: flex;
+  appearance: none;
+  background-color: #139ed8;
+  border: 1px solid rgba(27, 31, 35, .15);
+  
+  box-shadow: rgba(27, 31, 35, .1) 0 1px 0;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 20px;
+  padding: 6px 16px;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.button-3:focus:not(:focus-visible):not(.focus-visible) {
+  box-shadow: none;
+  outline: none;
+}
+
+.button-3:hover {
+  background-color:rgba(0,149, 207 , 0.7)
+}
+
+.button-3:focus {
+  box-shadow: rgba(46, 164, 79, .4) 0 0 0 3px;
+  outline: none;
+}
+
+.button-3:disabled {
+  background-color: #94d3a2;
+  border-color: rgba(27, 31, 35, .1);
+  color: rgba(255, 255, 255, .8);
+  cursor: default;
+}
+
+.button-3:active {
+  background-color: #298e46;
+  box-shadow: rgba(20, 70, 32, .2) 0 1px 0 inset;
+}
