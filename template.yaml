@@ -14,13 +14,6 @@ Globals:
     Runtime: nodejs18.x
     MemorySize: 128
     Timeout: 10
-  Api:
-    EndpointConfiguration: EDGE
-    TracingEnabled: true
-    Cors:
-      AllowMethods: '''OPTIONS,GET'''
-      AllowHeaders: '''Content-Type'''
-      AllowOrigin: '''*'''
 Resources:
   SESEventSQSDeadLeter:
     Type: 'AWS::SQS::Queue'
@@ -143,12 +136,6 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SESEventsTable
-      Events:
-        HttpPost:
-          Type: Api
-          Properties:
-            Path: /
-            Method: get
     Metadata:
       'AWS::CloudFormation::Designer':
         id: c97126fc-566e-4d2e-bec6-a4275cd5e294
@@ -160,10 +147,7 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Designer':
         id: 968b2a2a-7489-4b00-8cf4-8c7b2bf967a5
-Outputs:
-  EventsAPI:
-    Description: API to retrieve events
-    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod'
+
 Metadata:
   'AWS::CloudFormation::Designer':
     968b2a2a-7489-4b00-8cf4-8c7b2bf967a5:
@@ -194,7 +178,7 @@ Metadata:
         x: 310
         'y': 160
       z: 1
-      embeds: []
+      embeds: [ ]
     c97126fc-566e-4d2e-bec6-a4275cd5e294:
       size:
         width: 60
@@ -204,7 +188,7 @@ Metadata:
         'y': 160
       z: 2
       parent: 968b2a2a-7489-4b00-8cf4-8c7b2bf967a5
-      embeds: []
+      embeds: [ ]
     1edfa9a2-4dfd-4ea6-a050-ae0884b7dcdb:
       size:
         width: 60
@@ -213,7 +197,7 @@ Metadata:
         x: 360
         'y': 390
       z: 1
-      embeds: []
+      embeds: [ ]
     00450781-3848-447b-85e7-526f54cb68f2:
       size:
         width: 60
@@ -222,7 +206,7 @@ Metadata:
         x: 510
         'y': 390
       z: 1
-      embeds: []
+      embeds: [ ]
     bce22d8f-5cbc-4935-aa75-d9b30ea96d3a:
       size:
         width: 60
@@ -232,7 +216,7 @@ Metadata:
         'y': 160
       z: 2
       parent: 29f463bb-b3e3-4cb1-b8b7-e2eb5bdd3a95
-      embeds: []
+      embeds: [ ]
     7756bc4d-50de-4721-9457-5297a5bb3078:
       size:
         width: 60
@@ -241,7 +225,7 @@ Metadata:
         x: 60
         'y': 440
       z: 1
-      embeds: []
+      embeds: [ ]
     321fa85f-b167-4be6-bdbf-ac675f03f754:
       size:
         width: 60
@@ -250,6 +234,6 @@ Metadata:
         x: 710
         'y': 390
       z: 1
-      embeds: []
+      embeds: [ ]
       dependson:
         - 00450781-3848-447b-85e7-526f54cb68f2

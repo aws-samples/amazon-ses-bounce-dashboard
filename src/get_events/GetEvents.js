@@ -50,9 +50,6 @@ const prepareRequest = (parameter, configuration = posiblesValues) => {
     }
 }
 export const handler = async (event, context) => {
-    if (event.httpMethod !== 'GET') {
-        throw new Error(`This API only accept GET method, you tried: ${event.httpMethod}`);
-    }
 
     let data = {}
     let items = {}
@@ -60,7 +57,7 @@ export const handler = async (event, context) => {
     let params = {
         TableName: process.env.TABLE_NAME,
         ExclusiveStartKey: null,
-        ...prepareRequest(event.multiValueQueryStringParameters)
+        ...prepareRequest(event)
     };
 
     try {
@@ -73,14 +70,5 @@ export const handler = async (event, context) => {
         console.log("Error in retrieving data from the DynamoDB table : ", err.message)
     }
     // Return the items to client with status code: 200
-    const response = {
-        statusCode: 200,
-        headers: {
-            "Access-Control-Allow-Headers": "Content-Type",
-            "Access-Control-Allow-Origin": "*", // Allow from anywhere
-            "Access-Control-Allow-Methods": "GET" // Allow only GET request
-        },
-        body: JSON.stringify(items)
-    };
-    return response;
+    return items;
 }
