@@ -1,0 +1,11 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "ses-event-manager"
+resolve_s3 = true
+s3_prefix = "ses-event-manager"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "BounceSNSTopic=\"arn:aws:sns:us-east-1:830321976775:ses-event\""
+image_repositories = []
+#on_failure = 'DELETE'

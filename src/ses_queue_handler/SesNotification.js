@@ -5,65 +5,50 @@
 
 
 // Create service client module using ES6 syntax.
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { PutCommand } from "@aws-sdk/lib-dynamodb";
+import {DynamoDBClient} from "@aws-sdk/client-dynamodb";
+import {PutCommand} from "@aws-sdk/lib-dynamodb";
 
 // Create the DynamoDB Document client.
-const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION  });
-
-
+const ddbClient = new DynamoDBClient({region: process.env.AWS_REGION});
 
 
 export const handler = async (event, context) => {
     // All log statements are written to CloudWatch by default. For more information, see
     // https://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-logging.html
-    console.info(event);
+    //console.info(event);
     const record = event.Records[0]
-  
-    const body = JSON.parse(record.body)
-    console.log(body)
-  
-  
-    const timestamp = body.Timestamp
-    const id = body.MessageId
-  
-    const message = JSON.parse(body.Message)
-    console.log(message)
-  
-    const destination = message.mail.destination[0]
+
+    const sqsBody = JSON.parse(record.body)
+    // console.log(body)
+
+    const timestamp = sqsBody.Timestamp
+    const id = sqsBody.MessageId
+
+    const message = JSON.parse(sqsBody.Message)
+    // All event definition. For more information, see
+    // https://docs.aws.amazon.com/ses/latest/dg/event-publishing-retrieving-sns-examples.html
     const type = message.eventType
+    const destination = message.mail.destination
     const source = message.mail.source
-  
-    var errorMsg = null
-    if(type == "Bounce") {   
-        errorMsg = "Message has bounced"
-    } else if (type=="Complaint") {
-        errorMsg = "A complaint has been received"
-    } else {
-        console.log("Notification is not a bounce or complaint.")
-        return
-    }
-  
-    console.log("Params")
-    
+    const messageId = message.mail.messageId
+    const detail = message[type.toLowerCase()] || {}
+    // console.log("Params")
+
     const putParams = {
         TableName: process.env.TABLE_NAME,
         Item: {
-          id: id,
-          timestamp: timestamp,
-          type: type,
-          from: source,
-          recipient: destination,
-          Error: errorMsg
-
+            id: messageId,
+            timestamp: timestamp,
+            type: type,
+            from: source,
+            recipient: destination,
+            detail: detail
         }
     };
-
-    console.log(putParams)
-
+    // console.log(putParams)
     try {
         const data = await ddbClient.send(new PutCommand(putParams));
-        console.log(data);
+        // console.log(data);
     } catch (err) {
         console.log("Error in writing data to the DynamoDB table : ", err.message)
     }

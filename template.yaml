@@ -1,16 +1,18 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  ses-dashboard
+  ses-dashboard-events  
 
 Transform:
-- AWS::Serverless-2016-10-31
+  - AWS::Serverless-2016-10-31
+
 
 Parameters:
   BounceSNSTopic:
     Type: "String"
     Description: "The bounce Amazon SNS Topic that has been created for the SES  identity. 
     Sepcify the SNS Topic by using its Amazon Resource Name (ARN). 
-    Examples:  arn:aws:sns:us-east-1:123456789012:ses-bounce-notification."
+    Examples:  arn:aws:sns:us-east-1:830321976775:ses-event
+    "
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -21,30 +23,43 @@ Globals:
   Api:
     # Allows any site to call these APIs (can restrict by replacing asterisk with site name)
     # Automatically adds AllowMethods with a list of methods for this API
-    EndpointConfiguration: EDGE 
-    TracingEnabled: true     
+    EndpointConfiguration: EDGE
+    TracingEnabled: true
     Cors:
       AllowMethods: "'OPTIONS,GET'"
       AllowHeaders: "'Content-Type'"
-      AllowOrigin: "'*'" 
+      AllowOrigin: "'*'"
 
 # Resources declares the AWS resources that you want to include in the stack
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
 Resources:
   ############################################################################################################################################################################
-#   SQS Queue that subscribes to the SES SNS Notification Topic
-#
-############################################################################################################################################################################
-  BounceSQS:
+  #   SQS Queue that subscribes to the SES SNS Notification Topic
+  #
+  ############################################################################################################################################################################
+
+  SESEventSQSDeadLeter:
     Type: AWS::SQS::Queue
     Properties:
       MessageRetentionPeriod: 300
+      QueueName: "ses-event-dead"
 
-  BounceSQSPolicy:
+  SESEventSQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 300
+      QueueName: "ses-event"
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SESEventSQSDeadLeter.Arn
+        maxReceiveCount: 2
+      VisibilityTimeout: 10
+    DependsOn:
+      - SESEventSQSDeadLeter
+  SESEventSQSPolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
-      Queues: 
-        - !Ref BounceSQS
+      Queues:
+        - !Ref SESEventSQS
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -55,45 +70,49 @@ Resources:
             - sqs:SendMessage
             - sqs:ReceiveMessage
           Effect: Allow
-          Resource: !GetAtt BounceSQS.Arn
+          Resource: !GetAtt SESEventSQS.Arn
           Condition:
             ArnEquals:
               aws:SourceArn: !Ref BounceSNSTopic
-
-  BounceSQSSubscription:
+    DependsOn:
+      - SESEventSQS
+  SESEventSQSSubscription:
     Type: AWS::SNS::Subscription
     Properties:
       Protocol: sqs
       RawMessageDelivery: true
-      Endpoint: !GetAtt BounceSQS.Arn
+      Endpoint: !GetAtt SESEventSQS.Arn
       TopicArn: !Ref BounceSNSTopic
+    DependsOn:
+      - SESEventSQS
 
-############################################################################################################################################################################
-#   DynamoDB Table that stores SES events
-############################################################################################################################################################################
+  ############################################################################################################################################################################
+  #   DynamoDB Table that stores SES events
+  ############################################################################################################################################################################
   SESEventsTable:
     Type: AWS::DynamoDB::Table
     Properties:
+      TableName: "ses-event"
       AttributeDefinitions:
-      - AttributeName: "id"
-        AttributeType: "S"
-      - AttributeName: "timestamp"
-        AttributeType: "S"
+        - AttributeName: "id"
+          AttributeType: "S"
+        - AttributeName: "timestamp"
+          AttributeType: "S"
       KeySchema:
-      - AttributeName: "id"
-        KeyType: "HASH"
-      - AttributeName: "timestamp"
-        KeyType: "RANGE"
-      BillingMode: PROVISIONED        
+        - AttributeName: "id"
+          KeyType: "HASH"
+        - AttributeName: "timestamp"
+          KeyType: "RANGE"
+      BillingMode: PROVISIONED
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
       SSESpecification:
         SSEEnabled: True
 
-############################################################################################################################################################################
-#   Lambda Function that processes the items on the SES SQS queues
-############################################################################################################################################################################
+  ############################################################################################################################################################################
+  #   Lambda Function that processes the items on the SES SQS queues
+  ############################################################################################################################################################################
   ProcessSESQueue:
     Type: AWS::Serverless::Function
     Properties:
@@ -103,24 +122,27 @@ Resources:
         Variables:
           TABLE_NAME: !Ref SESEventsTable
       Policies:
-      - DynamoDBCrudPolicy:
-          TableName: !Ref SESEventsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SESEventsTable
       Events:
-        BounceSQSEvent:
+        SESEventSQSEvent:
           Type: SQS
           Properties:
-            Queue: !GetAtt BounceSQS.Arn
+            Queue: !GetAtt SESEventSQS.Arn
             BatchSize: 1
-  
+            ScalingConfig:
+              MaximumConcurrency: 5
+    DependsOn:
+      - SESEventSQS
   ProcessSESQueueLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${ProcessSESQueue}
       RetentionInDays: 7
 
-############################################################################################################################################################################
-#   Lambda Function that retrieves the events stored in the DynamoDB table 
-############################################################################################################################################################################
+  ############################################################################################################################################################################
+  #   Lambda Function that retrieves the events stored in the DynamoDB table
+  ############################################################################################################################################################################
   GetEventsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -130,8 +152,8 @@ Resources:
         Variables:
           TABLE_NAME: !Ref SESEventsTable
       Policies:
-      - DynamoDBCrudPolicy:
-          TableName: !Ref SESEventsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SESEventsTable
       Events:
         HttpPost:
           Type: Api
@@ -139,7 +161,7 @@ Resources:
             Path: '/'
             Method: get
 
-  
+
   GetEventsFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -151,10 +173,10 @@ Resources:
 #   Outputs
 #
 ############################################################################################################################################################################
- 
+
 Outputs:
   EventsAPI:
     Description: API to retrieve events
     Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod
- 
+
 
