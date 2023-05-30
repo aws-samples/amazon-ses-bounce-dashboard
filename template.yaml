@@ -1,83 +1,74 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: >-
-  ses-dashboard-events  
-
+Description: 'ses-dashboard-events  '
 Transform:
-  - AWS::Serverless-2016-10-31
-
-
+  - 'AWS::Serverless-2016-10-31'
 Parameters:
   BounceSNSTopic:
-    Type: "String"
-    Description: "The bounce Amazon SNS Topic that has been created for the SES  identity. 
-    Sepcify the SNS Topic by using its Amazon Resource Name (ARN). 
-    Examples:  arn:aws:sns:us-east-1:830321976775:ses-event
-    "
-
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+    Type: String
+    Description: >-
+      The bounce Amazon SNS Topic that has been created for the SES  identity. 
+      Sepcify the SNS Topic by using its Amazon Resource Name (ARN).  Examples: 
+      arn:aws:sns:us-east-1:830321976775:ses-event
 Globals:
   Function:
     Runtime: nodejs18.x
     MemorySize: 128
     Timeout: 10
   Api:
-    # Allows any site to call these APIs (can restrict by replacing asterisk with site name)
-    # Automatically adds AllowMethods with a list of methods for this API
     EndpointConfiguration: EDGE
     TracingEnabled: true
     Cors:
-      AllowMethods: "'OPTIONS,GET'"
-      AllowHeaders: "'Content-Type'"
-      AllowOrigin: "'*'"
-
-# Resources declares the AWS resources that you want to include in the stack
-# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+      AllowMethods: '''OPTIONS,GET'''
+      AllowHeaders: '''Content-Type'''
+      AllowOrigin: '''*'''
 Resources:
-  ############################################################################################################################################################################
-  #   SQS Queue that subscribes to the SES SNS Notification Topic
-  #
-  ############################################################################################################################################################################
-
   SESEventSQSDeadLeter:
-    Type: AWS::SQS::Queue
+    Type: 'AWS::SQS::Queue'
     Properties:
       MessageRetentionPeriod: 300
-      QueueName: "ses-event-dead"
-
+      QueueName: ses-event-dead
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 1edfa9a2-4dfd-4ea6-a050-ae0884b7dcdb
   SESEventSQS:
-    Type: AWS::SQS::Queue
+    Type: 'AWS::SQS::Queue'
     Properties:
       MessageRetentionPeriod: 300
-      QueueName: "ses-event"
+      QueueName: ses-event
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt SESEventSQSDeadLeter.Arn
         maxReceiveCount: 2
       VisibilityTimeout: 10
     DependsOn:
       - SESEventSQSDeadLeter
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 00450781-3848-447b-85e7-526f54cb68f2
   SESEventSQSPolicy:
-    Type: AWS::SQS::QueuePolicy
+    Type: 'AWS::SQS::QueuePolicy'
     Properties:
       Queues:
         - !Ref SESEventSQS
       PolicyDocument:
-        Version: '2012-10-17'
+        Version: 2012-10-17
         Statement:
           Principal:
-            AWS:
-              - !Ref AWS::AccountId
+            Service: "sns.amazonaws.com"
           Action:
-            - sqs:SendMessage
-            - sqs:ReceiveMessage
+            - 'SQS:SendMessage'
+            - 'SQS:ReceiveMessage'
           Effect: Allow
           Resource: !GetAtt SESEventSQS.Arn
           Condition:
             ArnEquals:
-              aws:SourceArn: !Ref BounceSNSTopic
+              'aws:SourceArn': !Ref BounceSNSTopic
     DependsOn:
       - SESEventSQS
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 321fa85f-b167-4be6-bdbf-ac675f03f754
   SESEventSQSSubscription:
-    Type: AWS::SNS::Subscription
+    Type: 'AWS::SNS::Subscription'
     Properties:
       Protocol: sqs
       RawMessageDelivery: true
@@ -85,36 +76,34 @@ Resources:
       TopicArn: !Ref BounceSNSTopic
     DependsOn:
       - SESEventSQS
-
-  ############################################################################################################################################################################
-  #   DynamoDB Table that stores SES events
-  ############################################################################################################################################################################
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 7756bc4d-50de-4721-9457-5297a5bb3078
   SESEventsTable:
-    Type: AWS::DynamoDB::Table
+    Type: 'AWS::DynamoDB::Table'
     Properties:
-      TableName: "ses-event"
+      TableName: ses-event
       AttributeDefinitions:
-        - AttributeName: "id"
-          AttributeType: "S"
-        - AttributeName: "timestamp"
-          AttributeType: "S"
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
       KeySchema:
-        - AttributeName: "id"
-          KeyType: "HASH"
-        - AttributeName: "timestamp"
-          KeyType: "RANGE"
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
       BillingMode: PROVISIONED
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
       SSESpecification:
-        SSEEnabled: True
-
-  ############################################################################################################################################################################
-  #   Lambda Function that processes the items on the SES SQS queues
-  ############################################################################################################################################################################
+        SSEEnabled: true
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 0d7f8580-69ee-4297-a770-5cea5e7c801e
   ProcessSESQueue:
-    Type: AWS::Serverless::Function
+    Type: 'AWS::Serverless::Function'
     Properties:
       CodeUri: src/ses_queue_handler/
       Handler: SesNotification.handler
@@ -132,22 +121,22 @@ Resources:
             BatchSize: 1
             ScalingConfig:
               MaximumConcurrency: 5
-    DependsOn:
-      - SESEventSQS
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: bce22d8f-5cbc-4935-aa75-d9b30ea96d3a
   ProcessSESQueueLogGroup:
-    Type: AWS::Logs::LogGroup
+    Type: 'AWS::Logs::LogGroup'
     Properties:
-      LogGroupName: !Sub /aws/lambda/${ProcessSESQueue}
+      LogGroupName: !Sub '/aws/lambda/${ProcessSESQueue}'
       RetentionInDays: 7
-
-  ############################################################################################################################################################################
-  #   Lambda Function that retrieves the events stored in the DynamoDB table
-  ############################################################################################################################################################################
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 29f463bb-b3e3-4cb1-b8b7-e2eb5bdd3a95
   GetEventsFunction:
-    Type: AWS::Serverless::Function
+    Type: 'AWS::Serverless::Function'
     Properties:
       CodeUri: src/get_events/
-      Handler: getEvents.handler
+      Handler: GetEvents.handler
       Environment:
         Variables:
           TABLE_NAME: !Ref SESEventsTable
@@ -158,25 +147,109 @@ Resources:
         HttpPost:
           Type: Api
           Properties:
-            Path: '/'
+            Path: /
             Method: get
-
-
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: c97126fc-566e-4d2e-bec6-a4275cd5e294
   GetEventsFunctionLogGroup:
-    Type: AWS::Logs::LogGroup
+    Type: 'AWS::Logs::LogGroup'
     Properties:
-      LogGroupName: !Sub /aws/lambda/${GetEventsFunction}
+      LogGroupName: !Sub '/aws/lambda/${GetEventsFunction}'
       RetentionInDays: 14
-
-
-############################################################################################################################################################################
-#   Outputs
-#
-############################################################################################################################################################################
-
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 968b2a2a-7489-4b00-8cf4-8c7b2bf967a5
 Outputs:
   EventsAPI:
     Description: API to retrieve events
-    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod
-
-
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod'
+Metadata:
+  'AWS::CloudFormation::Designer':
+    968b2a2a-7489-4b00-8cf4-8c7b2bf967a5:
+      size:
+        width: 150
+        height: 150
+      position:
+        x: 20
+        'y': 100
+      z: 1
+      embeds:
+        - c97126fc-566e-4d2e-bec6-a4275cd5e294
+    29f463bb-b3e3-4cb1-b8b7-e2eb5bdd3a95:
+      size:
+        width: 150
+        height: 150
+      position:
+        x: 470
+        'y': 110
+      z: 1
+      embeds:
+        - bce22d8f-5cbc-4935-aa75-d9b30ea96d3a
+    0d7f8580-69ee-4297-a770-5cea5e7c801e:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 310
+        'y': 160
+      z: 1
+      embeds: []
+    c97126fc-566e-4d2e-bec6-a4275cd5e294:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 80
+        'y': 160
+      z: 2
+      parent: 968b2a2a-7489-4b00-8cf4-8c7b2bf967a5
+      embeds: []
+    1edfa9a2-4dfd-4ea6-a050-ae0884b7dcdb:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 360
+        'y': 390
+      z: 1
+      embeds: []
+    00450781-3848-447b-85e7-526f54cb68f2:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 510
+        'y': 390
+      z: 1
+      embeds: []
+    bce22d8f-5cbc-4935-aa75-d9b30ea96d3a:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 510
+        'y': 160
+      z: 2
+      parent: 29f463bb-b3e3-4cb1-b8b7-e2eb5bdd3a95
+      embeds: []
+    7756bc4d-50de-4721-9457-5297a5bb3078:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 60
+        'y': 440
+      z: 1
+      embeds: []
+    321fa85f-b167-4be6-bdbf-ac675f03f754:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 710
+        'y': 390
+      z: 1
+      embeds: []
+      dependson:
+        - 00450781-3848-447b-85e7-526f54cb68f2
