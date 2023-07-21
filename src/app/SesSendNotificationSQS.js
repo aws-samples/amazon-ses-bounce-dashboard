@@ -24,7 +24,7 @@ export const handler = async (event, context) => {
             ConfigurationSetName
         });
         const messageId = responseSes.MessageId;
-        dynamoUpdateItem({
+        await dynamoUpdateItem({
             TableName: process.env.TABLE_EMAIL_NAME,
             Key: {
                 id: id

@@ -18,15 +18,16 @@ export const handler = async (event, context) => {
         const messageId = message.mail.messageId
         const event_detail = message[type.toLowerCase()] || {}
         const timestamp = event_detail.timestamp || new Date().toISOString();
-        await dynamoPutItem({
+        const data = {
+            id: messageId,
+            timestamp: timestamp,
+            type: type,
+            event: event_detail,
+            mail
+        };
+        const saved = await dynamoPutItem({
             TableName: process.env.TABLE_EVENT_NAME,
-            Item: {
-                id: messageId,
-                timestamp: timestamp,
-                type: type,
-                event: event_detail,
-                mail
-            }
+            Item: data
         })
     } catch (err) {
         console.warn(event)

@@ -14,9 +14,10 @@ Globals:
     Runtime: nodejs18.x
     MemorySize: 128
     Timeout: 10
+    Environment:
+      Variables:
+        TTL: '6000'
 Resources:
-
-
   SESEventsTable:
     Type: 'AWS::DynamoDB::Table'
     Properties:
@@ -47,13 +48,13 @@ Resources:
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
-        - AttributeName: timestamp
-          AttributeType: S
+      #        - AttributeName: timestamp
+      #          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
-        - AttributeName: timestamp
-          KeyType: RANGE
+      #        - AttributeName: timestamp
+      #          KeyType: RANGE
       BillingMode: PROVISIONED
       ProvisionedThroughput:
         ReadCapacityUnits: 5
@@ -152,6 +153,7 @@ Resources:
     Properties:
       CodeUri: src/app/
       Handler: SesNotification.handler
+      FunctionName: ses-event-process
       Environment:
         Variables:
           TABLE_EVENT_NAME: !Ref SESEventsTable
@@ -170,11 +172,20 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Designer':
         id: bce22d8f-5cbc-4935-aa75-d9b30ea96d3a
+  ProcessSESQueueLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ProcessSESQueue}'
+      RetentionInDays: 7
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 29f463bb-b3e3-4cb1-b8b7-e2eb5bdd3a95
   ProcessSESSendQueue:
     Type: 'AWS::Serverless::Function'
     Properties:
       CodeUri: src/app/
       Handler: SesSendNotificationSQS.handler
+      FunctionName: ses-send-email-process
       Environment:
         Variables:
           TABLE_EVENT_NAME: !Ref SESEventsTable
@@ -211,11 +222,20 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Designer':
         id: bce22d8f-5cbc-4935-aa75-d9b30ea96d3a
+  ProcessSESSendQueueLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ProcessSESSendQueue}'
+      RetentionInDays: 7
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 29f463bb-b3e3-4cb1-b8b7-e2eb5bdd3a95
   SendNotificationFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
       CodeUri: src/app/
       Handler: SendNotification.handler
+      FunctionName: ses-send-email
       Environment:
         Variables:
           TABLE_EVENT_NAME: !Ref SESEventsTable
@@ -245,33 +265,10 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Designer':
         id: c97126fc-566e-4d2e-bec6-a4275cd5e294
-  GetEventsFunction:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      CodeUri: src/app/
-      Handler: GetEvents.handler
-      Environment:
-        Variables:
-          TABLE_EVENT_NAME: !Ref SESEventsTable
-          TABLE_EMAIL_NAME: !Ref SESEmailTable
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref SESEventsTable
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: c97126fc-566e-4d2e-bec6-a4275cd5e294
-  GetEventsFunctionLogGroup:
+  SendNotificationFunctionLogGroup:
     Type: 'AWS::Logs::LogGroup'
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${GetEventsFunction}'
-      RetentionInDays: 14
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: 968b2a2a-7489-4b00-8cf4-8c7b2bf967a5
-  ProcessSESQueueLogGroup:
-    Type: 'AWS::Logs::LogGroup'
-    Properties:
-      LogGroupName: !Sub '/aws/lambda/${ProcessSESQueue}'
+      LogGroupName: !Sub '/aws/lambda/${SendNotificationFunction}'
       RetentionInDays: 7
     Metadata:
       'AWS::CloudFormation::Designer':

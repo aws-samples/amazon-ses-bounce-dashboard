@@ -46,7 +46,7 @@ export const handler = async (event, context) => {
         };
 
         let response = {};
-        response['saved'] = await dynamoPutItem({TableName: process.env.TABLE_EMAIL_NAME, Item: saveData})
+        await dynamoPutItem({TableName: process.env.TABLE_EMAIL_NAME, Item: saveData})
         const data = await sqsSendMessage(params);
         if (data) {
             response = {
