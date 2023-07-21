@@ -1,4 +1,4 @@
-import {getFieldFromManifiesto} from "./uitls.js";
+import {getFieldFromManifiesto} from "../app/utils/uitls.js";
 
 
 const campos = getFieldFromManifiesto({

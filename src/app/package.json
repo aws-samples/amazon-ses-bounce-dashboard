@@ -1,7 +1,7 @@
 {
-  "name": "ses_queue_send_handler",
+  "name": "SES-MANAGGER",
   "version": "1.0.0",
-  "description": "",
+  "description": "Control de mensajes SES",
   "type": "module",
   "main": "SendNotification.js",
   "scripts": {
