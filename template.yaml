@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: 'ses-dashboard-events  '
+Description: 'ses-dashboard-events'
 Transform:
   - 'AWS::Serverless-2016-10-31'
 Parameters:
@@ -15,6 +15,76 @@ Globals:
     MemorySize: 128
     Timeout: 10
 Resources:
+  SESEventsTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: ses-event
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 0d7f8580-69ee-4297-a770-5cea5e7c801e
+  SESEmailTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: ses-email
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 0d7f8580-69ee-4297-a770-5cea5e7c801e
+
+  SESSendEmailSQSDeadLeter:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      MessageRetentionPeriod: 300
+      QueueName: ses-send-email-dead
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 1edfa9a2-4dfd-4ea6-a050-ae0884b7dcdb
+  SESSendEmailSQS:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      MessageRetentionPeriod: 300
+      QueueName: ses-send-email
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SESSendEmailSQSDeadLeter.Arn
+        maxReceiveCount: 4
+      VisibilityTimeout: 10
+    DependsOn:
+      - SESSendEmailSQSDeadLeter
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 00450781-3848-447b-85e7-526f54cb68f2
+
   SESEventSQSDeadLeter:
     Type: 'AWS::SQS::Queue'
     Properties:
@@ -72,29 +142,7 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Designer':
         id: 7756bc4d-50de-4721-9457-5297a5bb3078
-  SESEventsTable:
-    Type: 'AWS::DynamoDB::Table'
-    Properties:
-      TableName: ses-event
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-        - AttributeName: timestamp
-          AttributeType: S
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-        - AttributeName: timestamp
-          KeyType: RANGE
-      BillingMode: PROVISIONED
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
-      SSESpecification:
-        SSEEnabled: true
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: 0d7f8580-69ee-4297-a770-5cea5e7c801e
+
   ProcessSESQueue:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -117,14 +165,29 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Designer':
         id: bce22d8f-5cbc-4935-aa75-d9b30ea96d3a
-  ProcessSESQueueLogGroup:
-    Type: 'AWS::Logs::LogGroup'
+  SendNotificationFunction:
+    Type: 'AWS::Serverless::Function'
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${ProcessSESQueue}'
-      RetentionInDays: 7
+      CodeUri: src/ses_queue_send_handler/
+      Handler: SendNotification.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref SESEmailTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SESEmailTable
+        - S3ReadPolicy:
+            BucketName: '*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+                - 'ses:SendRawEmail'
+              Resource: '*'
     Metadata:
       'AWS::CloudFormation::Designer':
-        id: 29f463bb-b3e3-4cb1-b8b7-e2eb5bdd3a95
+        id: c97126fc-566e-4d2e-bec6-a4275cd5e294
   GetEventsFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -147,6 +210,14 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Designer':
         id: 968b2a2a-7489-4b00-8cf4-8c7b2bf967a5
+  ProcessSESQueueLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ProcessSESQueue}'
+      RetentionInDays: 7
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 29f463bb-b3e3-4cb1-b8b7-e2eb5bdd3a95
 
 Metadata:
   'AWS::CloudFormation::Designer':
@@ -187,7 +258,7 @@ Metadata:
         x: 80
         'y': 160
       z: 2
-      parent: 968b2a2a-7489-4b00-8cf4-8c7b2bf967a5
+      pareker nt: 968b2a2a-7489-4b00-8cf4-8c7b2bf967a5
       embeds: [ ]
     1edfa9a2-4dfd-4ea6-a050-ae0884b7dcdb:
       size:

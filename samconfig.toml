@@ -9,3 +9,4 @@ capabilities = "CAPABILITY_IAM"
 parameter_overrides = "BounceSNSTopic=\"arn:aws:sns:us-east-1:830321976775:ses-event\""
 image_repositories = []
 #on_failure = 'DELETE'
+disable_rollback = true
