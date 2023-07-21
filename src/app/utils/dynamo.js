@@ -71,16 +71,3 @@ export const dynamoUpdateItem = ({
     return ddbClient.send(comand);
 };
 
-
-const response = await dynamoUpdateItem({
-    TableName: 'ses-email',
-    Key: {
-        id: '145c422f-55a6-4051-91f1-1c59a67e9259'
-    },
-    UpdateExpression: "set messageId = :messageId",
-    ExpressionAttributeValues: {
-        ":messageId": '2123',
-    }
-})
-
-console.log(response)

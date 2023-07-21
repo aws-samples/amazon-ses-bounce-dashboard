@@ -25,8 +25,9 @@ export const handler = async (event, context) => {
             event: event_detail,
             mail
         };
+        const tableName = process.env.TABLE_EVENT_NAME;
         const saved = await dynamoPutItem({
-            TableName: process.env.TABLE_EVENT_NAME,
+            TableName: tableName,
             Item: data
         })
     } catch (err) {
