@@ -5,7 +5,9 @@
 
 
 // Create service client module using ES6 syntax.
-import {DynamoDBClient, PutCommand} from "@aws-sdk/client-dynamodb";
+import {DynamoDBClient} from "@aws-sdk/client-dynamodb";
+import {PutCommand} from "@aws-sdk/lib-dynamodb";
+
 import {GetObjectCommand, S3Client} from "@aws-sdk/client-s3";
 import {SendEmailCommand, SESClient} from "@aws-sdk/client-ses";
 
@@ -34,8 +36,6 @@ const translateConfig = {marshallOptions, unmarshallOptions};
 
 // Create the DynamoDB Document client.
 const ddbClient = new DynamoDBClient(translateConfig);
-
-
 
 
 export const handler = async (event, context) => {
@@ -103,26 +103,24 @@ export const handler = async (event, context) => {
 
         const sendEmailComand = new SendEmailCommand(params)
         let responseSes = await sesClient.send(sendEmailComand);
+        const saveData = {
+            id: id,
+            messageId: responseSes.MessageId,
+            documentoId,
+            pais,
+            stage: ambiente,
+            domain: dominio,
+            manifiesto,
+            empresa,
+            application: aplicacion,
+            timestamp: timestamp
+        }
         const putParams = {
             TableName: process.env.TABLE_NAME,
-            Item: {
-                id: id,
-                messageId: responseSes.MessageId,
-                documentoId,
-                pais,
-                stage: ambiente,
-                domain: dominio,
-                manifiesto,
-                empresa,
-                application: aplicacion,
-                timestamp: timestamp
-            }
+            Item: saveData
         };
         ddbClient.send(new PutCommand(putParams));
-        return {
-            statusCode: 200,
-            body: JSON.stringify(event),
-        }
+        return saveData
     } catch (err) {
         err.requestId = requestId;
         console.warn(event)
