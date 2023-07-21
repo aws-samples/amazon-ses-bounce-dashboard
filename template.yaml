@@ -66,7 +66,8 @@ Resources:
     Type: 'AWS::SQS::Queue'
     Properties:
       MessageRetentionPeriod: 300
-      QueueName: ses-send-email-dead
+      QueueName: ses-send-email-dead.fifo
+      FifoQueue: true
     Metadata:
       'AWS::CloudFormation::Designer':
         id: 1edfa9a2-4dfd-4ea6-a050-ae0884b7dcdb
@@ -74,7 +75,8 @@ Resources:
     Type: 'AWS::SQS::Queue'
     Properties:
       MessageRetentionPeriod: 300
-      QueueName: ses-send-email
+      QueueName: ses-send-email.fifo
+      FifoQueue: true
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt SESSendEmailSQSDeadLeter.Arn
         maxReceiveCount: 4
@@ -173,11 +175,21 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref SESEmailTable
+          SQS_URL: !Ref SESSendEmailSQS
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SESEmailTable
         - S3ReadPolicy:
             BucketName: '*'
+        - SQSSendMessagePolicy:
+            QueueName: '*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+                - 'ses:SendRawEmail'
+              Resource: '*'
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
