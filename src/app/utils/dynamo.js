@@ -1,5 +1,5 @@
 import {DynamoDBClient} from "@aws-sdk/client-dynamodb";
-import {PutCommand} from "@aws-sdk/lib-dynamodb";
+import {PutCommand, UpdateCommand} from "@aws-sdk/lib-dynamodb";
 
 
 const marshallOptions = {
@@ -20,6 +20,52 @@ const translateConfig = {marshallOptions, unmarshallOptions};
 
 // Create the DynamoDB Document client.
 const ddbClient = new DynamoDBClient(translateConfig);
-export function dynamoPutItem(putParams){
-    return ddbClient.send(new PutCommand(putParams));
-}
+
+
+/**
+ *
+ * @param TableName
+ * @param Item = { id }
+ * @returns {Promise<(Omit<PutItemCommandOutput, "Attributes" | "ItemCollectionMetrics"> & {Attributes?: Record<string, NativeAttributeValue>, ItemCollectionMetrics?: Omit<ItemCollectionMetrics, "ItemCollectionKey"> & {ItemCollectionKey?: Record<string, NativeAttributeValue>}}) | PutItemCommandOutput> | void}
+ */
+export const dynamoPutItem = (
+    {
+        TableName,
+        Item
+    }
+) => ddbClient.send(new PutCommand({
+    TableName,
+    Item
+}));
+
+/**
+ *
+ * @param TableName
+ * @param Key = {
+ *       id: "1",
+ *     }
+ * @param UpdateExpression = "set VALUE = :color"
+ * @param ExpressionAttributeValues =  {
+ *                                          ":color": "black",
+ *                                      }
+ * @param ReturnValues = "ALL_NEW"
+ * @returns {Promise<(Omit<UpdateItemCommandOutput, "Attributes" | "ItemCollectionMetrics"> & {Attributes?: Record<string, NativeAttributeValue>, ItemCollectionMetrics?: Omit<ItemCollectionMetrics, "ItemCollectionKey"> & {ItemCollectionKey?: Record<string, NativeAttributeValue>}}) | UpdateItemCommandOutput> | void}
+ */
+export const dynamoUpdateItem = ({
+                                     TableName,
+                                     Key,
+                                     UpdateExpression,
+                                     ExpressionAttributeValues,
+                                     ReturnValues = "ALL_NEW",
+                                 }) => {
+    const comand = new UpdateCommand(
+        {
+            TableName,
+            Key,
+            UpdateExpression,
+            ExpressionAttributeValues,
+            ReturnValues,
+        }
+    )
+    return ddbClient.send(comand);
+};

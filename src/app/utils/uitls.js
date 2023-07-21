@@ -1,22 +1,6 @@
 import {sesSendEmailComand} from "./ses.js";
+import {getFileAsJSON} from "./s3.js";
 
-export function getBuketAndPath(manifiesto) {
-    let rutaManifiesto = manifiesto.replace("//", "/");
-    // Verificar si la ruta inicia con una barra "/"
-    let iniciaConBarra = rutaManifiesto.startsWith('/');
-    // Eliminar la barra inicial si existe
-    if (iniciaConBarra) {
-        rutaManifiesto = rutaManifiesto.substring(1);
-    }
-    // Obtener el índice de la primera barra "/"
-    let indiceBarra = rutaManifiesto.indexOf('/');
-    // Extraer la primera parte de la ruta en la letiable "bucket"
-    let bucket = rutaManifiesto.substring(0, indiceBarra);
-    // Extraer el resto de la ruta en la letiable "path"
-    let path = rutaManifiesto.substring(indiceBarra);
-    path = path.startsWith('/') ? path.substring(1) : path;
-    return {bucket, path};
-}
 
 export function getFieldFromManifiesto(manifiestoArray) {
     const campos = manifiestoArray.campos.reduce((acc, item) => {
@@ -28,8 +12,7 @@ export function getFieldFromManifiesto(manifiestoArray) {
     return campos
 }
 
-
-async function sendEmailFromManifest(destinatario, manifiesto, ConfigurationSetName) {
+export async function sendEmailFromManifest({destinatario, manifiesto, ConfigurationSetName = 'default'}) {
     let destinatarios = []
     //Check if destinatario is array
     if (Array.isArray(destinatario)) {
@@ -37,16 +20,7 @@ async function sendEmailFromManifest(destinatario, manifiesto, ConfigurationSetN
     } else {
         destinatarios = destinatario.split(",").map(value => value.trim())
     }
-    let {bucket, path} = getBuketAndPath(manifiesto);
-    const input = {
-        "Bucket": bucket,
-        "Key": path,
-        //"Range": "bytes=0-9"
-    };
-    const command = new GetObjectCommand(input);
-    const response = await s3Client.send(command);
-    const stream = response.Body;
-    const manifest = JSON.parse(Buffer.concat(await stream.toArray()));
+    const manifest = await getFileAsJSON(manifiesto);
     const emailField = getFieldFromManifiesto(manifest)
 
     let params = {
@@ -71,7 +45,6 @@ async function sendEmailFromManifest(destinatario, manifiesto, ConfigurationSetN
                 Data: emailField.subject.value
             }
         },
-        // ReplyToAddresses: [],
         Source: emailField.from.value,
         ConfigurationSetName: ConfigurationSetName
     };

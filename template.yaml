@@ -154,7 +154,8 @@ Resources:
       Handler: SesNotification.handler
       Environment:
         Variables:
-          TABLE_NAME: !Ref SESEventsTable
+          TABLE_EVENT_NAME: !Ref SESEventsTable
+          TABLE_EMAIL_NAME: !Ref SESEmailTable
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SESEventsTable
@@ -169,6 +170,47 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Designer':
         id: bce22d8f-5cbc-4935-aa75-d9b30ea96d3a
+  ProcessSESSendQueue:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: src/app/
+      Handler: SesSendNotificationSQS.handler
+      Environment:
+        Variables:
+          TABLE_EVENT_NAME: !Ref SESEventsTable
+          TABLE_EMAIL_NAME: !Ref SESEmailTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SESEmailTable
+        - S3ReadPolicy:
+            BucketName: '*'
+        - SQSSendMessagePolicy:
+            QueueName: '*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+                - 'ses:SendRawEmail'
+              Resource: '*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+                - 'ses:SendRawEmail'
+              Resource: '*'
+      Events:
+        SESEventSQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SESSendEmailSQS.Arn
+            BatchSize: 1
+            ScalingConfig:
+              MaximumConcurrency: 10
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: bce22d8f-5cbc-4935-aa75-d9b30ea96d3a
   SendNotificationFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -176,7 +218,8 @@ Resources:
       Handler: SendNotification.handler
       Environment:
         Variables:
-          TABLE_NAME: !Ref SESEmailTable
+          TABLE_EVENT_NAME: !Ref SESEventsTable
+          TABLE_EMAIL_NAME: !Ref SESEmailTable
           SQS_URL: !Ref SESSendEmailSQS
       Policies:
         - DynamoDBCrudPolicy:
@@ -209,7 +252,8 @@ Resources:
       Handler: GetEvents.handler
       Environment:
         Variables:
-          TABLE_NAME: !Ref SESEventsTable
+          TABLE_EVENT_NAME: !Ref SESEventsTable
+          TABLE_EMAIL_NAME: !Ref SESEmailTable
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SESEventsTable

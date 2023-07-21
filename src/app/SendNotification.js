@@ -19,29 +19,25 @@ export const handler = async (event, context) => {
             manifiesto,
             empresa = '0',
             aplicacion = 'FEB',
+            destinatarios = [],
             ConfigurationSetName = "default"
         } = event;
-        // let responseSes = await sendEmailFromManifest(destinatario, manifiesto, ConfigurationSetName);
         const saveData = {
-            id: id,
-            // messageId: responseSes.MessageId,
+            id,
+            messageId: null,
             documentoId,
             pais,
             stage: ambiente,
             domain: dominio,
             manifiesto,
             empresa,
+            destinatarios,
             application: aplicacion,
-            timestamp: timestamp
+            timestamp: timestamp,
+            ConfigurationSetName,
         }
 
         const params = {
-            // MessageAttributes: {
-            // Author: {
-            //     DataType: "String",
-            //     StringValue: "Preeti",
-            // }
-            // },
             MessageDeduplicationId: id,
             MessageGroupId: requestId,
             MessageBody: JSON.stringify(saveData),
@@ -50,7 +46,6 @@ export const handler = async (event, context) => {
         let response;
         const data = await sqsSendMessage(params);
         if (data) {
-            console.log("Success, message sent. MessageID:", data.MessageId);
             response = {
                 statusCode: 200,
                 body: saveData
@@ -63,11 +58,7 @@ export const handler = async (event, context) => {
                 }
             };
         }
-        const putParams = {
-            TableName: process.env.TABLE_NAME,
-            Item: saveData
-        };
-        dynamoPutItem(putParams)
+        dynamoPutItem({TableName: process.env.TABLE_EMAIL_NAME, Item: saveData})
         return response
     } catch (err) {
         err.requestId = requestId;
