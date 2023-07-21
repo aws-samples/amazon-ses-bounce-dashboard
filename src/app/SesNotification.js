@@ -18,7 +18,7 @@ export const handler = async (event, context) => {
         const messageId = message.mail.messageId
         const event_detail = message[type.toLowerCase()] || {}
         const timestamp = event_detail.timestamp || new Date().toISOString();
-        dynamoPutItem({
+        await dynamoPutItem({
             TableName: process.env.TABLE_EMAIL_NAME,
             Item: {
                 id: messageId,

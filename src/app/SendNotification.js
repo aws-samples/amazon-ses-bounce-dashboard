@@ -12,7 +12,8 @@ export const handler = async (event, context) => {
     try {
         const {
             id = requestId,
-            documentoId,
+            documentoId = null,
+            messageId = null,
             pais,
             ambiente,
             dominio,
@@ -24,8 +25,8 @@ export const handler = async (event, context) => {
         } = event;
         const saveData = {
             id,
-            messageId: null,
             documentoId,
+            messageId,
             pais,
             stage: ambiente,
             domain: dominio,
@@ -43,22 +44,25 @@ export const handler = async (event, context) => {
             MessageBody: JSON.stringify(saveData),
             QueueUrl: process.env.SQS_URL
         };
-        let response;
+
+        let response = {};
+        response['saved'] = await dynamoPutItem({TableName: process.env.TABLE_EMAIL_NAME, Item: saveData})
         const data = await sqsSendMessage(params);
         if (data) {
             response = {
+                ...response,
                 statusCode: 200,
                 body: saveData
             };
         } else {
             response = {
+                ...response,
                 statusCode: 500,
                 body: {
                     message: 'Some error occured !!'
                 }
             };
         }
-        dynamoPutItem({TableName: process.env.TABLE_EMAIL_NAME, Item: saveData})
         return response
     } catch (err) {
         err.requestId = requestId;

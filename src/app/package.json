@@ -15,5 +15,8 @@
     "@aws-sdk/client-sqs": "^3.341.0",
     "@aws-sdk/client-ses": "^3.341.0",
     "@aws-sdk/client-s3": "^3.341.0"
+  },
+  "dependencies": {
+    "mimemessage": "^1.0.5"
   }
 }
