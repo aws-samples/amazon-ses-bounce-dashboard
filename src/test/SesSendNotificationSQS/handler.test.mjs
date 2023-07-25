@@ -1,4 +1,4 @@
-import {handler} from "../../app/SesSendNotificationSQS";
+import {handler} from "../../node/SesSendNotificationSQS";
 
 const evento = {
     "Records": [

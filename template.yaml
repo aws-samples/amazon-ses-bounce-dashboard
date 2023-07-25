@@ -151,7 +151,7 @@ Resources:
   ProcessSESQueue:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: src/app/
+      CodeUri: src/node/
       Handler: SesNotification.handler
       FunctionName: ses-event-process
       Environment:
@@ -183,7 +183,7 @@ Resources:
   ProcessSESSendQueue:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: src/app/
+      CodeUri: src/node/
       Handler: SesSendNotificationSQS.handler
       FunctionName: ses-send-email-process
       Environment:
@@ -233,7 +233,7 @@ Resources:
   SendNotificationFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: src/app/
+      CodeUri: src/node/
       Handler: SendNotification.handler
       FunctionName: ses-send-email
       Environment:
