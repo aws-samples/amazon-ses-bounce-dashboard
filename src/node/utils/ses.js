@@ -1,74 +1,59 @@
+import nodemailer from 'nodemailer'
+
 import * as fs from 'fs';
 
-import {SendEmailCommand, SendRawEmailCommand, SESClient} from "@aws-sdk/client-ses";
-
-import * as mimemessage from 'mimemessage';
+import * as aws from "@aws-sdk/client-ses";
+import {SendEmailCommand, SESClient} from "@aws-sdk/client-ses";
 
 
 const sesClient = new SESClient();
 
+const ses = new aws.SES();
+const transport = nodemailer.createTransport({
+    SES: {ses, aws}
+});
 
-export function sesSendEmailComand(params = {
-    Destination,
-    Message,
-    Source,
-    ConfigurationSetName: "default"
-}) {
-    if (true) {
+export async function sesSendEmailComand(params = {
+                                             Destination: [],
+                                             Message,
+                                             Source,
+                                             ConfigurationSetName: "default"
+                                         },
+                                         adjuntos = []
+) {
+    if (!adjuntos || adjuntos.length == 0 ) {
         const sendEmailComand = new SendEmailCommand(params)
         return sesClient.send(sendEmailComand);
     }
-    var mailContent = mimemessage.factory({
-        contentType: 'multipart/mixed',
-        body: []
-    });
-
-    mailContent.header('From', 'Test <informacion@informacion.febos.cl>');
-    mailContent.header('To', 'claudio@febos.cl');
-    mailContent.header('Subject', 'Customer service contact info');
-
-    var alternateEntity = mimemessage.factory({
-        contentType: 'multipart/alternate',
-        body: []
-    });
-
-    var htmlEntity = mimemessage.factory({
-        contentType: 'text/html;charset=utf-8',
-        body: '   <html>  ' +
-            '   <head></head>  ' +
-            '   <body>  ' +
-            '   <h1>Hello!</h1>  ' +
-            '   <p>Please see the attached file for a list of    customers to contact.</p>  ' +
-            '   </body>  ' +
-            '  </html>  '
-    });
-
-    var plainEntity = mimemessage.factory({
-        body: 'Please see the attached file for a list of    customers to contact.'
-    });
-
-    alternateEntity.body.push(htmlEntity);
-    alternateEntity.body.push(plainEntity);
-
-    var data = fs.readFileSync('a.xml');
-
-    var attachmentEntity = mimemessage.factory({
-        contentType: 'application/xml',
-        contentTransferEncoding: 'base64',
-        body: data
-    });
-
-    attachmentEntity.header('Content-Disposition', 'attachment ;filename="a.xml"');
-    // mailContent.body.push(attachmentEntity);
-
-
-    const raw = {
-        RawMessage: {Data: mailContent}
+    let attachments = []
+    /*
+        {
+            filename: 'a.xml',
+            contentType: 'application/xml',
+            encoding: 'base64',
+            content: attachment
+        }
+     */
+    for (let adjunto of adjuntos) {
+        var attachment = {
+            filename: adjunto.filename,
+            contentType: adjunto.contentType,
+            encoding: 'base64',
+            content: await fs.readFileSync(adjunto.content)
+        }
+        attachments.push(attachment)
     }
+    const data = {
+        from: params.Source,
+        to: params.Destination.ToAddresses.join(","),
+        subject: params.Message.Subject.Data,
+        text: params.Message.Body.Text.Data,
+        html: params.Message.Body.Html.Data,
+        attachments
+    };
 
-    const rawEmailCommand = new SendRawEmailCommand(raw)
-    return sesClient.send(rawEmailCommand);
+    let info = await transport.sendMail(data);
+    return {
+        MessageId: info.response
+    }
 }
-
-
-sesSendEmailComand({})

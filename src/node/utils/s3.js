@@ -1,4 +1,12 @@
+import * as fs from 'fs';
+import * as path from "path";
+
+
+import AWS from "aws-sdk";
 import {GetObjectCommand, S3Client} from "@aws-sdk/client-s3";
+
+
+var s3 = new AWS.S3();
 
 const s3Client = new S3Client();
 
@@ -29,7 +37,31 @@ export async function getFileAsString(s3Path) {
     const command = new GetObjectCommand(input);
     const response = await s3Client.send(command);
     const stream = response.Body;
-    return Buffer.concat(await stream.toArray());
+    return await stream.transformToString()
+
+}
+
+
+export async function downloadS3AsFile({s3Path, name, dirName = '/tmp'}) {
+    const filePath = path.join(dirName, name);
+    const {bucket, path: objectPath} = getBuketAndPath(s3Path);
+    const params = {
+        "Bucket": bucket,
+        "Key": objectPath
+    };
+
+    let file = fs.createWriteStream(filePath)
+
+    const promise = await new Promise((resolve, reject) => {
+        s3.getObject(params).createReadStream()
+            .on('end', () => {
+                return resolve();
+            })
+            .on('error', (error) => {
+                return reject(error);
+            }).pipe(file)
+    })
+    return filePath;
 }
 
 export async function getFileAsJSON(s3Path) {
