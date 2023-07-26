@@ -3,7 +3,7 @@
 
 'use strict'
 
-import {dynamoPutItem} from "./utils/index.js";
+import {dynamoPutItem, sendEventToBus} from "./utils/index.js";
 
 const TABLE_EMAIL_SUPPRESSION_NAME = process.env.TABLE_EMAIL_SUPPRESSION_NAME;
 const TABLE_EVENT_NAME = process.env.TABLE_EVENT_NAME
@@ -28,7 +28,14 @@ export const handler = async (event, context) => {
         await dynamoPutItem({
             TableName: TABLE_EVENT_NAME, Item: data
         })
-        await procesarEventosSuppression({type, event_detail, mail, timestamp, messageId})
+        await procesarEventosSuppression({
+            type,
+            event_detail,
+            mail,
+            timestamp,
+            messageId,
+            companyId: obtenerCompanyFromEmailTags(mail)
+        })
     } catch (err) {
         console.warn(event)
         console.log("Error in writing data to the DynamoDB table : ", err.message)
@@ -36,12 +43,23 @@ export const handler = async (event, context) => {
     }
 }
 
-async function procesarEventosSuppression({type, event_detail, mail, timestamp, messageId}) {
+function obtenerCompanyFromEmailTags(mail) {
+    try {
+        if (mail.tags.empresa) {
+            return mail.tags.empresa.join(",")
+        }
+    } catch (e) {
+        console.error(e);
+    }
+    return '0'
+}
+
+async function procesarEventosSuppression({type, event_detail, mail, timestamp, messageId, companyId = '0'}) {
     if (type === 'Bounce') {
         const recipents = event_detail.bouncedRecipients
         for (let recipent of recipents) {
             const {
-                emailAddress,  diagnosticCode
+                emailAddress, diagnosticCode
             } = recipent;
             await dynamoPutItem({
                 TableName: TABLE_EMAIL_SUPPRESSION_NAME, Item: {
@@ -49,7 +67,15 @@ async function procesarEventosSuppression({type, event_detail, mail, timestamp, 
                     timestamp,
                     type,
                     message: diagnosticCode,
-                    messageId
+                    messageId,
+                    companyId
+                }
+            })
+            sendEventToBus({
+                type: 'email-suppression',
+                event: {
+                    emailAddress,
+                    companyId
                 }
             })
         }
@@ -64,7 +90,15 @@ async function procesarEventosSuppression({type, event_detail, mail, timestamp, 
                     timestamp,
                     type,
                     message: reason,
-                    messageId
+                    messageId,
+                    companyId
+                }
+            })
+            sendEventToBus({
+                type: 'email-suppression',
+                event: {
+                    destinationElement,
+                    companyId
                 }
             })
         }
@@ -81,7 +115,15 @@ async function procesarEventosSuppression({type, event_detail, mail, timestamp, 
                     timestamp,
                     type,
                     message: diagnosticCode,
-                    messageId
+                    messageId,
+                    companyId
+                }
+            })
+            sendEventToBus({
+                type: 'email-suppression',
+                event: {
+                    emailAddress,
+                    companyId
                 }
             })
         }
