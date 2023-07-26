@@ -19,14 +19,21 @@ def handler(message, context):
         sqsBody = json.loads(message['Records'][0]['body'])
 
         id = value_or_default(sqsBody, 'id')
+
+        item = table.get_item(Key={
+            'id': id
+        })
+        item = item['Item']
         destinatarios = value_or_default(sqsBody, 'destinatarios')
         manifiesto = value_or_default(sqsBody, 'manifiesto')
         ConfigurationSetName = value_or_default(sqsBody, 'ConfigurationSetName', 'default')
         respuesta_email = sen_notification_from_manifest(
             destinatarios,
             manifiesto,
-            ConfigurationSetName
+            ConfigurationSetName,
+            item
         )
+
         messageId = respuesta_email['MessageId']
         print("MessageId: " + messageId)
         params = {
@@ -53,7 +60,8 @@ def handler(message, context):
 def sen_notification_from_manifest(
         destinatario,
         manifiesto,
-        ConfigurationSetName="default"
+        ConfigurationSetName="default",
+        item={}
 ):
     destinatarios = []
     if isinstance(destinatario, list):
@@ -63,7 +71,7 @@ def sen_notification_from_manifest(
     contenido = s3_get_object_string(manifiesto)[0]
     configuracion_manifiesto = json.loads(contenido)
     attachments = []
-    adjuntos = value_or_default(configuracion_manifiesto,'adjuntos',[])
+    adjuntos = value_or_default(configuracion_manifiesto, 'adjuntos', [])
     for adjunto in adjuntos:
         file_path = s3.s3_get_object_file(adjunto['ruta'], adjunto['nombreArchivo'])[0]
         attachments.append({
@@ -72,10 +80,11 @@ def sen_notification_from_manifest(
             'subtype': adjunto['mediatype'] + '/' + adjunto['submediatype']
         })
 
-
     emailField = pasar_campos_en_manifiesto_a_objeto(configuracion_manifiesto)
 
-
+    tags = []
+    if 'empresa' in item:
+        tags.append({'Name': 'empresa', 'Value': item['empresa']})
 
     client = SesClient(config_set_name=ConfigurationSetName)
     return client.send_email(
@@ -84,7 +93,8 @@ def sen_notification_from_manifest(
         subject=emailField['subject']['value'],
         body_text=value_or_default(value_or_default(emailField, 'text', {}), 'value', '-'),
         body_html=emailField['html']['value'],
-        attachments=attachments
+        attachments=attachments,
+        tags=tags
     )
 
 

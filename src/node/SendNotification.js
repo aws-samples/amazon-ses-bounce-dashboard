@@ -20,9 +20,12 @@ export const handler = async (event, context) => {
             manifiesto,
             empresa = '0',
             aplicacion = 'FEB',
+            servicio = '',
+            proceso = '',
             destinatarios = [],
             ConfigurationSetName = "default"
         } = event;
+
         const saveData = {
             id,
             documentoId,
@@ -33,6 +36,8 @@ export const handler = async (event, context) => {
             manifiesto,
             empresa,
             destinatarios,
+            servicio,
+            proceso,
             application: aplicacion,
             timestamp: timestamp,
             ConfigurationSetName,

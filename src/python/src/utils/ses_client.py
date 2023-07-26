@@ -33,7 +33,8 @@ class SesClient(object):
                    body_text=None,
                    body_html=None,
                    charset=CHARSET,
-                   attachments=[]
+                   attachments=[],
+                   tags= []
                    ):
         if not attachments or len(attachments) == 0:
             response = self.send_plain_mail(
@@ -44,7 +45,8 @@ class SesClient(object):
                 charset,
                 sender_email,
                 subject,
-                to_addresses
+                to_addresses,
+                tags=tags
             )
         else:
             response = self.send_attachments_mail(
@@ -56,7 +58,8 @@ class SesClient(object):
                 sender_email,
                 subject,
                 to_addresses,
-                attachments
+                attachments,
+                tags=tags
             )
         return response
 
@@ -70,7 +73,8 @@ class SesClient(object):
             sender_email,
             subject,
             to_addresses=[],
-            attachments=[]
+            attachments=[],
+            tags= []
     ):
         msg = MIMEMultipart('mixed')
         # Add subject, from and to lines.
@@ -111,7 +115,8 @@ class SesClient(object):
                 RawMessage={
                     'Data': msg.as_string(),
                 },
-                ConfigurationSetName=self.config_set_name
+                ConfigurationSetName=self.config_set_name,
+                Tags=tags
             )
         except ClientError as e:
             raise e
@@ -126,7 +131,8 @@ class SesClient(object):
                         charset,
                         sender_email,
                         subject,
-                        to_addresses
+                        to_addresses,
+                        tags= []
                         ):
         try:
             response = self.client.send_email(
@@ -155,6 +161,7 @@ class SesClient(object):
                 },
                 Source=sender_email,
                 ConfigurationSetName=self.config_set_name,
+                Tags=tags
             )
         except ClientError as e:
             print(e.response['Error']['Message'], e.args[0])

@@ -6,6 +6,9 @@ Parameters:
   AWSEnv:
     Type: String
     Default: AWS
+  STAGE:
+    Type: String
+    Default: ''
   BounceSNSTopic:
     Type: String
     Description: >-
@@ -21,6 +24,32 @@ Globals:
       Variables:
         TTL: '6000'
 Resources:
+  SESEmailSuppressionnTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: ses-email-suppression
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      #        - AttributeName: timestamp
+      #          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      #        - AttributeName: timestamp
+      #          KeyType: RANGE
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: 'expiration'
+        Enabled: true
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 0d7f8580-69ee-4297-a770-5cea5e7c801e
   SESEventsTable:
     Type: 'AWS::DynamoDB::Table'
     Properties:
@@ -147,6 +176,7 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Designer':
         id: 321fa85f-b167-4be6-bdbf-ac675f03f754
+
   SESEventSQSSubscription:
     Type: 'AWS::SNS::Subscription'
     Properties:
@@ -170,11 +200,14 @@ Resources:
         Variables:
           TABLE_EVENT_NAME: !Ref SESEventsTable
           TABLE_EMAIL_NAME: !Ref SESEmailTable
+          TABLE_EMAIL_SUPPRESSION_NAME: !Ref SESEmailSuppressionnTable
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SESEmailTable
         - DynamoDBCrudPolicy:
             TableName: !Ref SESEventsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SESEmailSuppressionnTable
         - S3ReadPolicy:
             BucketName: '*'
         - SQSSendMessagePolicy:
@@ -221,9 +254,12 @@ Resources:
         Variables:
           TABLE_EVENT_NAME: !Ref SESEventsTable
           TABLE_EMAIL_NAME: !Ref SESEmailTable
+          TABLE_EMAIL_SUPPRESSION_NAME: !Ref SESEmailSuppressionnTable
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SESEmailTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SESEmailSuppressionnTable
         - S3ReadPolicy:
             BucketName: '*'
         - SQSSendMessagePolicy:
@@ -271,10 +307,13 @@ Resources:
         Variables:
           TABLE_EVENT_NAME: !Ref SESEventsTable
           TABLE_EMAIL_NAME: !Ref SESEmailTable
+          TABLE_EMAIL_SUPPRESSION_NAME: !Ref SESEmailSuppressionnTable
           SQS_URL: !Ref SESSendEmailSQS
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SESEmailTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SESEmailSuppressionnTable
         - S3ReadPolicy:
             BucketName: '*'
         - SQSSendMessagePolicy:
