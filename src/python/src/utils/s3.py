@@ -26,9 +26,9 @@ def s3_obtener_key_desde_ruta(url: str):
     return re.match("^(.*?)/(.*)$", url)[2]
 
 
-
-def s3_get_object_file(ruta: str) -> ():
+def s3_get_object_file(ruta: str, name=None) -> ():
     salida = s3_get_object_bytes(ruta)
+    nombre = ruta if name is None else name
     return (byte_to_file(salida[0], nombre=ruta), salida[1])
 
 

@@ -1,6 +1,7 @@
 import json
 import os
 
+from utils import s3
 from utils.dynamo import get_dynamo_client
 from utils.logic import value_or_default
 from utils.s3 import s3_get_object_string
@@ -61,16 +62,29 @@ def sen_notification_from_manifest(
         destinatarios = destinatario.split(',')
     contenido = s3_get_object_string(manifiesto)[0]
     configuracion_manifiesto = json.loads(contenido)
+    attachments = []
+    adjuntos = value_or_default(configuracion_manifiesto,'adjuntos',[])
+    for adjunto in adjuntos:
+        file_path = s3.s3_get_object_file(adjunto['ruta'], adjunto['nombreArchivo'])[0]
+        attachments.append({
+            'file_name': adjunto['nombreArchivo'],
+            'file_path': file_path,
+            'subtype': adjunto['mediatype'] + '/' + adjunto['submediatype']
+        })
+
+
     emailField = pasar_campos_en_manifiesto_a_objeto(configuracion_manifiesto)
 
-    client = SesClient()
+
+
+    client = SesClient(config_set_name=ConfigurationSetName)
     return client.send_email(
         to_addresses=destinatarios,
         sender_email=emailField['from']['value'],
         subject=emailField['subject']['value'],
         body_text=value_or_default(value_or_default(emailField, 'text', {}), 'value', '-'),
         body_html=emailField['html']['value'],
-        attachments=[]
+        attachments=attachments
     )
 
 

@@ -6,6 +6,8 @@ from email.mime.text import MIMEText
 import boto3
 from botocore.exceptions import ClientError
 
+from utils.logic import value_or_default
+
 # Specify a configuration set. If you do not want to use a configuration
 # set, comment the following variable, and the
 # ConfigurationSetName=CONFIGURATION_SET argument below.
@@ -67,14 +69,14 @@ class SesClient(object):
             charset,
             sender_email,
             subject,
-            to_addresses,
+            to_addresses=[],
             attachments=[]
     ):
         msg = MIMEMultipart('mixed')
         # Add subject, from and to lines.
         msg['Subject'] = subject
         msg['From'] = sender_email
-        msg['To'] = to_addresses
+        msg['To'] = ','.join(to_addresses)
         # Create a multipart/alternative child container.
         msg_body = MIMEMultipart('alternative')
 
@@ -94,28 +96,25 @@ class SesClient(object):
         for attachment in attachments:
             file_name = attachment['file_name']
             file_path = attachment['file_path']
-            att = MIMEApplication(open(file_path, 'rb').read())
+            atachment_data = open(file_path, 'rb').read()
+            att = MIMEApplication(atachment_data)
             att.add_header('Content-Disposition', 'attachment', filename=file_name)
-            if os.path.exists(file_name):
+            if not os.path.exists(file_name):
                 print("File exists")
-            else:
-                print("File does not exists")
             msg.attach(att)
 
         try:
-            destination = msg['To']
             # Provide the contents of the email.
             response = self.client.send_raw_email(
                 Source=msg['From'],
-                Destinations=[destination],
+                Destinations=to_addresses,
                 RawMessage={
                     'Data': msg.as_string(),
                 },
                 ConfigurationSetName=self.config_set_name
             )
-        # Display an error if something goes wrong.
         except ClientError as e:
-            print(e.response['Error']['Message'], e.args[0])
+            raise e
         else:
             return response
 
