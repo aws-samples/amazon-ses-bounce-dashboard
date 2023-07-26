@@ -3,6 +3,9 @@ Description: 'ses-dashboard-events'
 Transform:
   - 'AWS::Serverless-2016-10-31'
 Parameters:
+  AWSEnv:
+    Type: String
+    Default: AWS
   BounceSNSTopic:
     Type: String
     Description: >-
@@ -98,6 +101,7 @@ Resources:
     Metadata:
       'AWS::CloudFormation::Designer':
         id: 1edfa9a2-4dfd-4ea6-a050-ae0884b7dcdb
+
   SESEventSQS:
     Type: 'AWS::SQS::Queue'
     Properties:
@@ -160,15 +164,33 @@ Resources:
           TABLE_EMAIL_NAME: !Ref SESEmailTable
       Policies:
         - DynamoDBCrudPolicy:
+            TableName: !Ref SESEmailTable
+        - DynamoDBCrudPolicy:
             TableName: !Ref SESEventsTable
+        - S3ReadPolicy:
+            BucketName: '*'
+        - SQSSendMessagePolicy:
+            QueueName: '*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+                - 'ses:SendRawEmail'
+              Resource: '*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+                - 'ses:SendRawEmail'
+              Resource: '*'
       Events:
         SESEventSQSEvent:
           Type: SQS
           Properties:
             Queue: !GetAtt SESEventSQS.Arn
             BatchSize: 1
-            ScalingConfig:
-              MaximumConcurrency: 5
     Metadata:
       'AWS::CloudFormation::Designer':
         id: bce22d8f-5cbc-4935-aa75-d9b30ea96d3a
@@ -183,8 +205,9 @@ Resources:
   ProcessSESSendQueue:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: src/node/
-      Handler: SesSendNotificationSQS.handler
+      CodeUri: src/python/src/
+      Handler: ses_send_notification_sqs.handler
+      Runtime: python3.8
       FunctionName: ses-send-email-process
       Environment:
         Variables:

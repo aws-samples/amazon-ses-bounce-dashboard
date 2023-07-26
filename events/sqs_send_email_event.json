@@ -1,0 +1,24 @@
+{
+  "Records": [
+    {
+      "messageId": "a8553a4a-cd18-475b-a186-6b967ab5ebf9",
+      "receiptHandle": "AQEB7ZzF4DDXaOnNL8hbraOwbr97cBH2Ik7bcc42OEPrnGkuTsflzEig7CuU/tQtNwVm/eZUSO+/4ep5uyp6OFMX2dwRqyW4gLofehRsbEmeL69OyYXAmOVAX7EmB0WJhWGF67km3bu6OEGQYZTTMmrwkbD7hu/xl4hffmAJQbp69FGfq9YWGF6aJxQpUyKLeWZEunsLkrYMLSRdycfVKB2amc2fBf+FgNeHW2HnCahYD8nEsxJDH4q/8S3qy5/bbS0maSQ0FSn22EQpq9BJFqznVceHzaLeI2BtvhBQ+UgXp0k=",
+      "body": "{\"id\":\"c53c9d09-8561-43a8-b8ed-b92c404a8cc6\",\"documentoId\":null,\"messageId\":null,\"pais\":\"chile\",\"stage\":\"desarrollo\",\"domain\":\"empresas.febos.cl\",\"manifiesto\":\"/febos-io/chile/desarrollo/email/31a14ff528ee1247b0289b72ffe75481625d/31a14ff528ee1247b0289b72ffe75481625d.json\",\"empresa\":\"0\",\"destinatarios\":[\"claudio+test@febos.cl\"],\"application\":\"FEB\",\"timestamp\":\"2023-07-26T15:39:51.896Z\",\"ConfigurationSetName\":\"default\"}",
+      "attributes": {
+        "ApproximateReceiveCount": "2",
+        "AWSTraceHeader": "Root=1-64c13e45-13afeb9f0b02725e784693c7;Parent=43d047e37767de39;Sampled=0;Lineage=74085691:0",
+        "SentTimestamp": "1690385992154",
+        "SequenceNumber": "18879482887700976640",
+        "MessageGroupId": "c53c9d09-8561-43a8-b8ed-b92c404a8cc6",
+        "SenderId": "AROA4CUYL4XDWRQJ5I45V:ses-send-email",
+        "MessageDeduplicationId": "c53c9d09-8561-43a8-b8ed-b92c404a8cc6",
+        "ApproximateFirstReceiveTimestamp": "1690385992154"
+      },
+      "messageAttributes": {},
+      "md5OfBody": "67d96b29ca579ac71a2e9127a98a8773",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:us-east-1:830321976775:ses-send-email.fifo",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

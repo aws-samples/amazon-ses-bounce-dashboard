@@ -1,0 +1,10 @@
+{
+  "pais": "chile",
+  "ambiente": "desarrollo",
+  "destinatarios": [
+    "claudio+test@febos.cl"
+  ],
+  "dominio": "empresas.febos.cl",
+  "tipo": "enviar",
+  "manifiesto": "/febos-io/chile/desarrollo/email/31a14ff528ee1247b0289b72ffe75481625d/31a14ff528ee1247b0289b72ffe75481625d.json"
+}

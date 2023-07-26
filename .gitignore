@@ -142,3 +142,4 @@ $RECYCLE.BIN/
 .aws-sam
 packaged.yaml
 samconfig.toml
+/src/python/env/
