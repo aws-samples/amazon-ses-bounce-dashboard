@@ -39,6 +39,10 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
+      TimeToLiveSpecification:
+        AttributeName: 'expiration'
+        Enabled: true
+
       SSESpecification:
         SSEEnabled: true
     Metadata:
@@ -64,6 +68,10 @@ Resources:
         WriteCapacityUnits: 5
       SSESpecification:
         SSEEnabled: true
+
+      TimeToLiveSpecification:
+        AttributeName: 'expiration'
+        Enabled: true
     Metadata:
       'AWS::CloudFormation::Designer':
         id: 0d7f8580-69ee-4297-a770-5cea5e7c801e
