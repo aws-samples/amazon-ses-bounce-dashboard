@@ -1,13 +1,17 @@
 {
-    "name": "get-events",
-    "version": "1.0.0",
-    "description": "",
-    "type": "module",
-    "main": "getEvents.js",
-    "scripts": {
-      "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "author": "Asif Hamza",
-    "license": "MIT-0"
+  "name": "get-events",
+  "version": "1.0.0",
+  "description": "Retrieve SES bounce and complaint events from DynamoDB",
+  "type": "module",
+  "main": "getEvents.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Asif Hamza",
+  "license": "MIT-0",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/util-dynamodb": "^3.0.0"
   }
+}
   

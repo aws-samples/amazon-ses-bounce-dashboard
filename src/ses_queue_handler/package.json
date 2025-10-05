@@ -1,12 +1,16 @@
 {
   "name": "ses_queue_handler",
   "version": "1.0.0",
-  "description": "",
+  "description": "Process SES bounce and complaint notifications",
   "type": "module",
-  "main": "SesNotificationHandler.js",
+  "main": "SesNotification.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Asif Hamza",
-  "license": "MIT-0"
+  "license": "MIT-0",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0"
+  }
 }

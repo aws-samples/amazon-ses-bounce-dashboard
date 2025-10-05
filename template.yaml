@@ -8,19 +8,17 @@ Transform:
 Parameters:
   BounceSNSTopic:
     Type: "String"
-    Description: "The bounce Amazon SNS Topic that has been created for the SES  identity. 
-    Sepcify the SNS Topic by using its Amazon Resource Name (ARN). 
-    Examples:  arn:aws:sns:us-east-1:123456789012:ses-bounce-notification."
+    Description: "The bounce Amazon SNS Topic that has been created for the SES identity. 
+    Specify the SNS Topic by using its Amazon Resource Name (ARN). 
+    Examples: arn:aws:sns:us-east-1:123456789012:ses-bounce-notification."
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Runtime: nodejs18.x
     MemorySize: 128
-    Timeout: 10
+    Timeout: 30
+    Tracing: Active
   Api:
-    # Allows any site to call these APIs (can restrict by replacing asterisk with site name)
-    # Automatically adds AllowMethods with a list of methods for this API
     EndpointConfiguration: EDGE 
     TracingEnabled: true     
     Cors:
@@ -28,17 +26,26 @@ Globals:
       AllowHeaders: "'Content-Type'"
       AllowOrigin: "'*'" 
 
-# Resources declares the AWS resources that you want to include in the stack
-# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
 Resources:
-  ############################################################################################################################################################################
+############################################################################################################################################################################
+#   Dead Letter Queue for failed SQS messages
+############################################################################################################################################################################
+  BounceDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 # 14 days
+      
+############################################################################################################################################################################
 #   SQS Queue that subscribes to the SES SNS Notification Topic
-#
 ############################################################################################################################################################################
   BounceSQS:
     Type: AWS::SQS::Queue
     Properties:
-      MessageRetentionPeriod: 300
+      MessageRetentionPeriod: 1209600 # 14 days
+      VisibilityTimeout: 90 # 3x Lambda timeout
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt BounceDLQ.Arn
+        maxReceiveCount: 3
 
   BounceSQSPolicy:
     Type: AWS::SQS::QueuePolicy
@@ -48,17 +55,17 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          Principal:
-            AWS:
-              - !Ref AWS::AccountId
-          Action:
-            - sqs:SendMessage
-            - sqs:ReceiveMessage
-          Effect: Allow
-          Resource: !GetAtt BounceSQS.Arn
-          Condition:
-            ArnEquals:
-              aws:SourceArn: !Ref BounceSNSTopic
+          - Principal:
+              AWS:
+                - !Ref AWS::AccountId
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+            Effect: Allow
+            Resource: !GetAtt BounceSQS.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref BounceSNSTopic
 
   BounceSQSSubscription:
     Type: AWS::SNS::Subscription
@@ -84,12 +91,11 @@ Resources:
         KeyType: "HASH"
       - AttributeName: "timestamp"
         KeyType: "RANGE"
-      BillingMode: PROVISIONED        
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+      BillingMode: PAY_PER_REQUEST
       SSESpecification:
         SSEEnabled: True
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
 
 ############################################################################################################################################################################
 #   Lambda Function that processes the items on the SES SQS queues
@@ -110,7 +116,8 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt BounceSQS.Arn
-            BatchSize: 1
+            BatchSize: 10
+            MaximumBatchingWindowInSeconds: 5
   
   ProcessSESQueueLogGroup:
     Type: AWS::Logs::LogGroup
@@ -139,22 +146,59 @@ Resources:
             Path: '/'
             Method: get
 
-  
   GetEventsFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${GetEventsFunction}
-      RetentionInDays: 14
+      RetentionInDays: 7
 
+############################################################################################################################################################################
+#   CloudWatch Alarms
+############################################################################################################################################################################
+  DLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alert when messages arrive in DLQ
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt BounceDLQ.QueueName
+
+  ProcessSESQueueErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alert on Lambda processing errors
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ProcessSESQueue
 
 ############################################################################################################################################################################
 #   Outputs
-#
 ############################################################################################################################################################################
  
 Outputs:
   EventsAPI:
     Description: API to retrieve events
     Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod
- 
+  
+  DLQUrl:
+    Description: Dead Letter Queue URL
+    Value: !Ref BounceDLQ
+    
+  TableName:
+    Description: DynamoDB Table Name
+    Value: !Ref SESEventsTable
 
